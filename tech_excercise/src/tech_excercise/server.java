@@ -57,53 +57,34 @@ public class server {
 
 	public boolean addMove(int move, player_info player) {
 
-		
 		boolean move_placed = false;
 		int row = 0;
-		
-		/*for(List<String> row : this.game_board.) {
-			if (this.game_board.get(row_placed).get(move).equals("[]")) {
+
+		for (int i = this.game_board.size() - 1; i >= 0; i--) {
+			System.out.println("String print");
+			System.out.println(this.game_board.get(0).get(move - 1));
+			System.out.println("end print");
+			if (this.game_board.get(i).get(move - 1).equals("[]")) {
 				switch (player.getColour()) {
 				case ("Blue"):
-					this.game_board.get(row_placed).set(move, player.getPlayerShape());
+					this.game_board.get(i).set(move - 1, player.getPlayerShape());
 					break;
 				case ("Red"):
-					this.game_board.get(row_placed).set(move, player.getPlayerShape());
+					this.game_board.get(i).set(move - 1, player.getPlayerShape());
 					break;
 				}
-				//System.out.println(row);
+				row = i;
+				System.out.println(row);
 				move_placed = true;
 				break;
 
 			}
-			row_placed++;
-			
-			
-		}*/
 
-		for (int i = this.game_board.size()-1; i >= 0; i--) {
-			System.out.println("String print");
-			System.out.println(this.game_board.get(0).get(move-1));
-			System.out.println("end print");
-				if (this.game_board.get(i).get(move-1).equals("[]")) {
-					switch (player.getColour()) {
-					case ("Blue"):
-						this.game_board.get(i).set(move-1, player.getPlayerShape());
-						break;
-					case ("Red"):
-						this.game_board.get(i).set(move-1, player.getPlayerShape());
-						break;
-					}
-					row = i;
-					System.out.println(row);
-					move_placed = true;
-					break;
-
-				}
-			
 		}
-		this.checkForWin(row, move, player.getColour(), player.getPlayerShape());
-		return move_placed;
+
+		boolean has_won = this.checkForWin(row, move, player.getColour(), player.getPlayerShape());
+		System.out.println(has_won);
+		return has_won;
 	}
 
 	public int getNumOfPlayers() {
@@ -114,30 +95,36 @@ public class server {
 		this.setUpGameBoard();
 	}
 
-	public void checkForWin(int row, int col, String player_colour, String shape) {
+	public boolean checkForWin(int row, int col, String player_colour, String shape) {
 
 		String streak = String.format("%s%s%s%s%s", shape, shape, shape, shape, shape);
-		List<String> horizontalLine = game_board.get(row);
-		System.out.println("back "+this.getBackSlash(row, col-1).indexOf(streak));
-		System.out.println("forward "+this.getForwardSlash(row, col-1).indexOf(streak));
-		System.out.println("vert "+this.getVerticalLine(col-1).indexOf(streak));
-		
-		if (this.getBackSlash(row, col-1).indexOf(streak) >= 0 || this.getVerticalLine(col-1).indexOf(streak) >= 0
-				|| this.getForwardSlash(row, col-1).indexOf(streak) >= 0
-				|| Collections.frequency(horizontalLine, shape) == 5) {
-			System.out.println("win");
-			for (List<String> test: game_board) {
-				System.out.println(test);
-			}
-			System.out.println("------------------------------------------");
 
+		System.out.println("back " + this.getBackSlash(row, col - 1).indexOf(streak));
+		System.out.println("forward " + this.getForwardSlash(row, col - 1).indexOf(streak));
+		System.out.println("vert " + this.getVerticalLine(col - 1).indexOf(streak));
+
+		if (this.getBackSlash(row, col - 1).indexOf(streak) >= 0 || this.getVerticalLine(col - 1).indexOf(streak) >= 0
+				|| this.getForwardSlash(row, col - 1).indexOf(streak) >= 0
+				|| this.getHorizontalLine(row, game_board.get(row)).indexOf(streak) >= 0) {
+			System.out.println("win");
+			return true;
 		}
-		
-		for (List<String> test: game_board) {
+
+		for (List<String> test : game_board) {
 			System.out.println(test);
 		}
 		System.out.println("------------------------------------------");
+		return false;
 
+	}
+
+	private StringBuilder getHorizontalLine(int row, List<String> line) {
+		StringBuilder horizontalLine = new StringBuilder(9);
+		for (String cell : line) {
+			horizontalLine.append(cell);
+
+		}
+		return horizontalLine;
 	}
 
 	private StringBuilder getVerticalLine(int col) {
@@ -210,6 +197,7 @@ public class server {
 						if (!t.getRequestHeaders().getFirst("player").equals(player.getName())) {
 							response = player.getState();
 							response += "," + player.getTurn();
+							response += "," + player.getHasWon();
 						}
 					}
 					t.sendResponseHeaders(200, response.length());
@@ -219,25 +207,25 @@ public class server {
 
 				case ("make_move"):
 					try {
-						Boolean move_made = false;
+						Boolean has_won = false;
 
 						for (player_info player : game.player_list) {
 							if (t.getRequestHeaders().getFirst("player").equals(player.getName())) {
-								move_made = game.addMove(Integer.parseInt(t.getRequestHeaders().getFirst("move")),
-										player);
+
+								has_won = game.addMove(Integer.parseInt(t.getRequestHeaders().getFirst("move")), player);
+								System.out.println(has_won);
+								player.setHasWon(has_won);
 								player.setTurn(false);
 							}
 						}
-						if(move_made) {
-							for (player_info other_player : game.player_list) {
-								if(!t.getRequestHeaders().getFirst("player").equals(other_player.getName())) {
-									other_player.setTurn(true);
-								}
-							}
+
+						for (player_info player : game.player_list) {
+							if (!t.getRequestHeaders().getFirst("player").equals(player.getName()))
+								player.setTurn(true);
 						}
 
-						t.sendResponseHeaders(200, move_made.toString().length());
-						os.write(move_made.toString().getBytes());
+						t.sendResponseHeaders(200, has_won.toString().length());
+						os.write(has_won.toString().getBytes());
 						os.close();
 						break;
 					}
@@ -296,12 +284,14 @@ public class server {
 		private String state;
 		private boolean turn;
 		private String player_shape;
+		private boolean has_won;
 
 		public player_info(String name, String colour, String State, boolean Turn) {
 			this.name = name;
 			this.colour = colour;
 			this.state = State;
 			this.turn = Turn;
+			this.has_won = false;
 
 		}
 
@@ -335,6 +325,14 @@ public class server {
 
 		private void setPlayerShape(String shape) {
 			this.player_shape = shape;
+		}
+
+		private void setHasWon(boolean result) {
+			this.has_won = result;
+		}
+
+		private boolean getHasWon() {
+			return this.has_won;
 		}
 
 	}

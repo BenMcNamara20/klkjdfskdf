@@ -80,6 +80,10 @@ public class client {
 		}
 		String response = this.Post("make_move", String.valueOf(move));
 		System.out.println(response);
+		if(Boolean.valueOf(response)){
+		System.out.println("You have won!");
+		this.quit_game();
+		}
 
 	}
 
@@ -138,16 +142,21 @@ public class client {
 		String response = "";
 		String msg = "get_status";
 
-		response = Post(msg);
+		String[] status = (response = Post(msg)).split(",");
 
-		while (response.split(",")[0].equals("ok") && response.split(",")[1].equals("true")) {
+		while (status[0].equals("ok") && status[1].equals("true") && status[2].equals("false")) {
 
-			response = Post(msg);
+			status = (response = Post(msg)).split(",");
 
 		}
-		if (response.split(",")[0].equals("not_ok")) {
+		if (status[0].equals("not_ok")) {
+			System.out.println("Other Player has quit");
 			this.quit_game();
-		} else if (response.split(",")[1].equals("false")) {
+		} 
+		else if(status[2].equals("true")) {
+			System.out.println("You have lost!");
+			this.quit_game();
+		}else if (status[1].equals("false")) {
 			System.out.println("Time to make a move");
 			this.make_move();
 		}
@@ -173,56 +182,9 @@ public class client {
 			System.out.print(cell);
 			}
 			System.out.println();
-			
-			
+				
 		}
 		
-		
-	}
-	
-	public void checkForWin() {
-		int move = 2;
-		int row = 2;
-		List<List<String>> game_board = Collections.synchronizedList(new ArrayList<>());
-		game_board.add(Arrays.asList("[X]", "[]", "[]", "[]", "[]", "[]", "[]", "[]", "[]"));
-		game_board.add(Arrays.asList("[]", "[X]", "[]", "[]", "[]", "[]", "[]", "[]", "[]"));
-		game_board.add(Arrays.asList("[]", "[]", "[X]", "[]", "[]", "[]", "[]", "[]", "[]"));
-		
-		
-		
-		List<String> horizontalLine = game_board.get(row);
-        /*StringBuilder verticalLine = new StringBuilder(9);		
-		for(int i = 0; i < 3; i++) {
-			game_board.get(i).get(move);
-			verticalLine.append(game_board.get(i).get(move));
-		}
-		
-		System.out.println(verticalLine);*/
-		
-		/*StringBuilder forwardSlash = new StringBuilder();
-		
-		for(int h = 0; h < 3;h++) {
-			int w = move + row - h;
-			if(0 <= w && w < 9) {
-				forwardSlash.append(game_board.get(h).get(w));
-			}
-		}*/
-		//System.out.println(forwardSlash);
-		
-		StringBuilder backSlash = new StringBuilder();
-		
-		
-		for(int h = 0; h < 3;h++) {
-			int w = move - row + h;
-			if(0 <= w && w < 9) {
-				backSlash.append(game_board.get(h).get(w));
-			}
-		}
-		String sym = "[X]";
-		String streak = String.format("%s%s%s%s",  sym,sym, sym, sym);
-		System.out.println(backSlash.indexOf(streak));
-		
-		System.out.println(Collections.frequency(horizontalLine, "[X]"));
 	}
 
 	public static void main(String[] args) throws Exception {
